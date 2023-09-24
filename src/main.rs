@@ -193,11 +193,12 @@ fn process(file_content: &RwLockReadGuard<HashSet<String>>, bench: bool, akk: u3
                     for i in 0..pubw {
                         let address44 = address_from_seed_bip44(&seed, &Secp256k1::new(), i_akk, i_in, i);
                         let address49 = address_from_seed_bip49(&seed, &Secp256k1::new(), i_akk, i_in, i);
+                        let address141 = address_from_seed_bip141(&seed, &Secp256k1::new(), i_in, i);
                         let address84 = address_from_seed_bip84(&seed, &Secp256k1::new(), i_akk, i_in, i);
-                        let addresa = [address44, address84, address49];
-                        for a in addresa {
+                        let addresa = [address44,address49,address141, address84];
+                        for (id_adr , a)in addresa.iter().enumerate() {
 
-                            if file_content.contains(&a) {
+                            if file_content.contains(&a.to_string()) {
                                 println!("=======================================================");
                                 println!("Adress:{}", &a);
                                 println!("SEED:{}", &mnemonic_x);
@@ -214,7 +215,7 @@ fn process(file_content: &RwLockReadGuard<HashSet<String>>, bench: bool, akk: u3
                                 time_test = time_test + 1;
                                 if time_test == 200 { test_find = true; }
 
-                                println!("SEED:{}  m/*'/0'/{}'/{}/{}/{}",&mnemonic_x,&i_akk, &i_in, &i, &a);
+                                println!("SEED:{}  {}/{}'/{}/{}/{}",&mnemonic_x, deriv_patch(id_adr as u8), &i_akk, &i_in, &i, &a);
                                 speed = speed + 1;
                                 if start.elapsed() >= Duration::from_secs(1) {
                                     println!("----------------------------------------");
@@ -230,6 +231,17 @@ fn process(file_content: &RwLockReadGuard<HashSet<String>>, bench: bool, akk: u3
             }
         }
     }
+}
+
+fn deriv_patch(i:u8)-> String{
+    match i {
+        0=>"m/44'/0'".to_string(),
+        1=>"m/49'/0'".to_string(),
+        2=>"m/".to_string(),
+        3=>"m/84'/0'".to_string(),
+        _ => "".to_string()
+    }
+
 }
 
 fn first_word(s: &String) -> &str {
@@ -299,5 +311,13 @@ fn address_from_seed_bip44(seed: &[u8], secp: &Secp256k1<All>, akk: u32, n_walle
     let child_priv = master_private_key.derive_priv(&secp, &path).unwrap();
     let child_pub = ExtendedPubKey::from_private(&secp, &child_priv);
     let a: Address = Address::p2pkh(&child_pub.public_key, Network::Bitcoin);
+    return a.to_string();
+}
+fn address_from_seed_bip141(seed: &[u8], secp: &Secp256k1<All>, n_wallet_in: u32, n_wallet: u32) -> String {
+    let master_private_key = ExtendedPrivKey::new_master(Network::Bitcoin, &seed).unwrap();
+    let path: DerivationPath = (format!("m/{}/{}",n_wallet_in,n_wallet)).parse().unwrap();
+    let child_priv = master_private_key.derive_priv(&secp, &path).unwrap();
+    let child_pub = ExtendedPubKey::from_private(&secp, &child_priv);
+    let a: Address = Address::p2shwpkh(&child_pub.public_key, Network::Bitcoin);
     return a.to_string();
 }
